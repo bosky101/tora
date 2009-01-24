@@ -39,14 +39,17 @@
 -define(CID_ITERNEXT, <<16#c851:16>>).
 -define(CID_FWMKEYS, <<16#c858:16>>).
 -define(CID_ADDINT, <<16#c860:16>>).
+-define(CID_SYNC, <<16#c870:16>>).
+-define(CID_VANISH, <<16#c871:16>>).
 
 %% API
 -export([
     connect/0, connect/2, 
     put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
     get/1, mget/1, vsiz/1, iterinit/0, iternext/0,
-    fwmkeys/2, addint/2
+    fwmkeys/2, addint/2, sync/0, vanish/0
 ]).
+%% -export([ext/?, adddouble/3]).
 
 %% gen_server callbacks
 -export([
@@ -127,6 +130,12 @@ fwmkeys(Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) ->
 addint(Key, N) when is_list(Key) andalso is_integer(N) ->
     gen_server:call(?SERVER, {addint, {list_to_binary(Key), N}}).
 
+%% @doc sync
+sync() -> gen_server:call(?SERVER, {sync}).
+
+%% @doc vanish
+vanish() -> gen_server:call(?SERVER, {vanish}).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -200,6 +209,16 @@ handle_call({fwmkeys, {Prefix, MaxKeys}}, _From, #state{socket=Sock}) ->
 handle_call({addint, {Key, N}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_ADDINT, ?KEYSIZE, <<N:32>>, Key])),
     Handler = fun(Reply) -> recv_addint(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({sync}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, ?CID_SYNC),
+    Handler = fun(Reply) -> recv_success(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({vanish}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, ?CID_VANISH),
+    Handler = fun(Reply) -> recv_success(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
