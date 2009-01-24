@@ -41,15 +41,20 @@
 -define(CID_ADDINT, <<16#c860:16>>).
 -define(CID_SYNC, <<16#c870:16>>).
 -define(CID_VANISH, <<16#c871:16>>).
+-define(CID_RNUM, <<16#c880:16>>).
+-define(CID_SIZE, <<16#c881:16>>).
+-define(CID_STAT, <<16#c888:16>>).
 
 %% API
 -export([
     connect/0, connect/2, 
     put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
     get/1, mget/1, vsiz/1, iterinit/0, iternext/0,
-    fwmkeys/2, addint/2, sync/0, vanish/0
+    fwmkeys/2, addint/2, sync/0, vanish/0,
+    rnum/0, size/0, stat/0
 ]).
 %% -export([ext/?, adddouble/3]).
+%% -export([copy/?, restore/?, setmst/?]).
 
 %% gen_server callbacks
 -export([
@@ -130,11 +135,20 @@ fwmkeys(Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) ->
 addint(Key, N) when is_list(Key) andalso is_integer(N) ->
     gen_server:call(?SERVER, {addint, {list_to_binary(Key), N}}).
 
-%% @doc sync
+%% @doc sync updates to file/device.
 sync() -> gen_server:call(?SERVER, {sync}).
 
-%% @doc vanish
+%% @doc remove all records
 vanish() -> gen_server:call(?SERVER, {vanish}).
+
+%% @doc total number of records
+rnum() -> gen_server:call(?SERVER, {rnum}).
+
+%% @doc size of the database
+size() -> gen_server:call(?SERVER, {size}).
+
+%% @doc status message of the database
+stat() -> gen_server:call(?SERVER, {stat}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -219,6 +233,21 @@ handle_call({sync}, _From, #state{socket=Sock}) ->
 handle_call({vanish}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, ?CID_VANISH),
     Handler = fun(Reply) -> recv_success(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({rnum}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, ?CID_RNUM),
+    Handler = fun(Reply) -> recv_size64(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({size}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, ?CID_SIZE),
+    Handler = fun(Reply) -> recv_size64(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({stat}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, ?CID_STAT),
+    Handler = fun(Reply) -> recv_stat(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
@@ -249,6 +278,7 @@ rr(Handler) ->
 recv_mget(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
 recv_fwmkeys(Sock, Reply) -> recv_count_2tuple(Sock, Reply).
 recv_addint(Sock, Reply) -> recv_size(Sock, Reply).
+recv_stat(Sock, Reply) -> recv_size_data(Sock, Reply).
 
 %%====================================================================
 %% Generic handlers for common reply formats
@@ -259,6 +289,9 @@ recv_success(_Sock, {tcp, _, ?SUCCESS}) -> ok.
 
 %% receive 8-bit success flag + 32-bit int
 recv_size(_Sock, {tcp, _, <<0:8, ValSize:32>>}) -> ValSize.
+
+%% receive 8-bit success flag + 64-bit int
+recv_size64(_Sock, {tcp, _, <<0:8, ValSize:64>>}) -> ValSize.
 
 %% receive 8-bit success flag + length1 + data1
 recv_size_data(Sock, Reply) ->

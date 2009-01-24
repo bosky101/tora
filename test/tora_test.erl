@@ -80,13 +80,22 @@ test_vanish() ->
     ok = tora:vanish(),
     {error, _} = tora:get("vanish1").
 
+test_rnum() ->
+    ok = tora:vanish(),
+    ok = tora:put("rnum1", <<"foo">>),
+    ok = tora:put("rnum2", <<"foo">>),
+    ?assertEqual(2, tora:rnum()),
+    ok = tora:vanish(),
+    ?assertEqual(0, tora:rnum()).
+
 % test generators
 put_tests() ->
     [fun test_put_get/0, fun test_putkeep/0, fun test_putcat/0, fun test_putsh1/0, fun test_putnr/0].
 gen_test_() ->
     Tests = [
             put_tests(), fun test_out/0, fun test_mget/0, fun test_vsiz/0, fun test_iter/0, fun test_fwmkeys/0,
-            fun test_addint/0, fun() -> ?assertEqual(ok, tora:sync()) end, fun test_vanish/0
+            fun test_addint/0, fun() -> ?assertEqual(ok, tora:sync()) end, fun test_vanish/0,
+            fun test_rnum/0, fun() -> tora:size() end, fun() -> tora:stat() end
         ],
     {inorder, {setup, fun setup/0, Tests}}.
 
