@@ -34,6 +34,11 @@
 
 -record(state, {socket}).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-include("test/tora_test.erl").
+-endif.
+
 %%====================================================================
 %% Public API
 %%====================================================================
