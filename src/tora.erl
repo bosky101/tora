@@ -30,14 +30,15 @@
 -define(CID_PUTCAT, <<16#c812:16>>).
 -define(CID_PUTSH1, <<16#c813:16>>).
 -define(CID_PUTNR, <<16#c818:16>>).
-
+-define(CID_OUT, <<16#c820:16>>).
 -define(CID_GET, <<16#c830:16>>).
+-define(CID_MGET, <<16#c831:16>>).
 
 %% API
 -export([
     connect/0, connect/2, 
-    put/2, putkeep/2, putcat/2, putsh1/3, putnr/2,
-    get/1
+    put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
+    get/1, mget/1
 ]).
 
 %% gen_server callbacks
@@ -72,8 +73,14 @@ putsh1(Key, Value, Width) when is_list(Key) andalso is_binary(Value) andalso is_
 putnr(Key, Value) when is_list(Key) andalso is_binary(Value) ->
     gen_server:cast(?SERVER, {putnr, {list_to_binary(Key), Value}}).
 
+out(Key) when is_list(Key) ->
+    gen_server:call(?SERVER, {out, {list_to_binary(Key)}}).
+
 get(Key) when is_list(Key) ->
     gen_server:call(?SERVER, {get, {list_to_binary(Key)}}).
+mget(Keys) when is_list(Keys) ->
+    BKeys = [list_to_binary(Key) || Key <- Keys],
+    gen_server:call(?SERVER, {mget, {BKeys}}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -84,31 +91,38 @@ init([Host, Port]) ->
 
 handle_call({put, {Key, Value}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUT, ?KEYSIZE, ?VALSIZE, Key, Value])),
-    Reply = recv_reply(),
-    {reply, Reply, #state{socket=Sock}};
+    {reply, recv_simple_reply(), #state{socket=Sock}};
 
 handle_call({putkeep, {Key, Value}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUTKEEP, ?KEYSIZE, ?VALSIZE, Key, Value])),
-    Reply = recv_reply(),
-    {reply, Reply, #state{socket=Sock}};
+    {reply, recv_simple_reply(), #state{socket=Sock}};
 
 handle_call({putcat, {Key, Value}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUTCAT, ?KEYSIZE, ?VALSIZE, Key, Value])),
-    Reply = recv_reply(),
-    {reply, Reply, #state{socket=Sock}};
+    {reply, recv_simple_reply(), #state{socket=Sock}};
 
 handle_call({putsh1, {Key, Value, Width}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUTSH1, ?KEYSIZE, ?VALSIZE, <<Width:32>>, Key, Value])),
-    Reply = recv_reply(),
-    {reply, Reply, #state{socket=Sock}};
+    {reply, recv_simple_reply(), #state{socket=Sock}};
+
+handle_call({out, {Key}}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, iolist_to_binary([?CID_OUT, ?KEYSIZE, Key])),
+    {reply, recv_simple_reply(), #state{socket=Sock}};
 
 handle_call({get, {Key}}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_GET, ?KEYSIZE, Key])),
-    Reply = case recv_reply() of
-        {ok, <<_ValSize:32, Value/binary>>} -> Value;
-        R -> R
-    end,
-    {reply, Reply, #state{socket=Sock}}.
+    {reply, recv_get_reply(Sock), #state{socket=Sock}};
+
+handle_call({mget, {BKeys}}, _From, #state{socket=Sock}) ->
+    KeysCount = length(BKeys),
+    Bins = iolist_to_binary(
+                lists:map(
+                    fun(Key) -> KeySize = byte_size(Key), iolist_to_binary([<<KeySize:32>>, Key]) end, 
+                    BKeys
+                )
+            ),
+    gen_tcp:send(Sock, iolist_to_binary([?CID_MGET, <<KeysCount:32>>, Bins])),
+    {reply, recv_mget_reply(Sock), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUTNR, ?KEYSIZE, ?VALSIZE, Key, Value])),
@@ -126,13 +140,54 @@ terminate(_Reason, #state{socket=Sock}) ->
 %%====================================================================
 %% Private stuff
 %%====================================================================
-recv_reply() ->
+recv_simple_reply() ->
     receive
         {tcp, _, <<0:8>>} -> ok;
-        {tcp, _, <<0:8, Rest/binary>>} -> {ok, Rest};
-        {tcp, _, <<Code:8, _/binary>>} -> {error, Code};
+        {tcp, _, <<Code:8>>} -> {error, Code};
         {error, closed} -> connection_closed
-    after ?TIMEOUT ->
-        timeout
+    after ?TIMEOUT -> timeout
     end.
 
+recv_get_reply(Sock) ->
+    receive
+        {tcp, _, <<0:8, ValSize:32, Rest/binary>>} ->
+            {Value, <<>>} = recv_until(Sock, Rest, ValSize),
+            Value;
+        {tcp, _, <<Code:8>>} -> {error, Code};
+        {error, closed} -> connection_closed
+    after ?TIMEOUT -> timeout
+    end.
+
+recv_mget_reply(Sock) ->
+    receive
+        {tcp, _, <<0:8, RecCnt:32, Rest/binary>>} ->
+            {KVS, _} = lists:mapfoldl(
+                            fun(_N, Acc) ->
+                                <<KeySize:32, ValSize:32, Bin/binary>> = Acc,
+                                {Key, Rest1} = recv_until(Sock, Bin, KeySize),
+                                {Value, Rest2} = recv_until(Sock, Rest1, ValSize),
+                                {{binary_to_list(Key), Value}, Rest2}
+                            end, 
+                            Rest, lists:seq(1, RecCnt)
+                        ),
+            KVS;
+        {tcp, _, <<Code:8>>} -> {error, Code};
+        {error, closed} -> connection_closed
+    after ?TIMEOUT -> timeout
+    end.
+
+recv_until(Sock, Bin, ReqLength) when byte_size(Bin) < ReqLength ->
+    receive
+        {tcp, Sock, Data} ->
+            Combined = <<Bin/binary, Data/binary>>,
+            recv_until(Sock, Combined, ReqLength);
+     	{error, closed} ->
+  			connection_closed
+    after ?TIMEOUT -> timeout
+    end;    
+recv_until(_Sock, Bin, ReqLength) when byte_size(Bin) =:= ReqLength ->
+    {Bin, <<>>};
+recv_until(_Sock, Bin, ReqLength) when byte_size(Bin) > ReqLength ->
+    <<Required:ReqLength/binary, Rest/binary>> = Bin,
+    {Required, Rest}.
+ 
