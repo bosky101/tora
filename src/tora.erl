@@ -38,13 +38,14 @@
 -define(CID_ITERINIT, <<16#c850:16>>).
 -define(CID_ITERNEXT, <<16#c851:16>>).
 -define(CID_FWMKEYS, <<16#c858:16>>).
+-define(CID_ADDINT, <<16#c860:16>>).
 
 %% API
 -export([
     connect/0, connect/2, 
     put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
     get/1, mget/1, vsiz/1, iterinit/0, iternext/0,
-    fwmkeys/2
+    fwmkeys/2, addint/2
 ]).
 
 %% gen_server callbacks
@@ -122,6 +123,10 @@ iternext() -> gen_server:call(?SERVER, {iternext}).
 fwmkeys(Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) -> 
     gen_server:call(?SERVER, {fwmkeys, {list_to_binary(Prefix), MaxKeys}}).
 
+%% @doc add integer N to the value and return the sum
+addint(Key, N) when is_list(Key) andalso is_integer(N) ->
+    gen_server:call(?SERVER, {addint, {list_to_binary(Key), N}}).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -190,6 +195,11 @@ handle_call({fwmkeys, {Prefix, MaxKeys}}, _From, #state{socket=Sock}) ->
     PrefixSize = byte_size(Prefix),
     gen_tcp:send(Sock, iolist_to_binary([?CID_FWMKEYS, <<PrefixSize:32>>, <<MaxKeys:32>>, Prefix])),
     Handler = fun(Reply) -> recv_fwmkeys(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({addint, {Key, N}}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, iolist_to_binary([?CID_ADDINT, ?KEYSIZE, <<N:32>>, Key])),
+    Handler = fun(Reply) -> recv_addint(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
@@ -219,6 +229,7 @@ rr(Handler) ->
 
 recv_mget(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
 recv_fwmkeys(Sock, Reply) -> recv_count_2tuple(Sock, Reply).
+recv_addint(Sock, Reply) -> recv_size(Sock, Reply).
 
 %%====================================================================
 %% Generic handlers for common reply formats

@@ -69,12 +69,19 @@ fwmkeys() ->
 
     Keys2 = tora:fwmkeys("fwmkeys", 2),
     ?assertEqual(2, length(Keys2)).
-    
+
+addint() ->
+    ok = tora:put("addint1", <<100:32/little>>),
+    <<100:32/little>> = tora:get("addint1"),
+    120 = tora:addint("addint1", 20).
 
 % test generators
 put_tests() ->
     [fun put_get/0, fun putkeep/0, fun putcat/0, fun putsh1/0, fun putnr/0].
 gen_test_() ->
-    Tests = [put_tests(), fun out/0, fun mget/0, fun vsiz/0, fun iter/0, fun fwmkeys/0],
+    Tests = [
+            put_tests(), fun out/0, fun mget/0, fun vsiz/0, fun iter/0, fun fwmkeys/0,
+            fun addint/0
+        ],
     {inorder, {setup, fun setup/0, Tests}}.
 
