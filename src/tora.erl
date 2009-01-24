@@ -2,7 +2,7 @@
 %%% File:      tora.erl
 %%% @author    Harish Mallipeddi <harish.mallipeddi@gmail.com>
 %%% @copyright 2009 Harish Mallipeddi
-%%% @doc       An Erlang client for Tokyo Tyrant (speaks the Tokyo Tyrant's TCP/IP protocol).
+%%% @doc       An Erlang client for Tokyo Tyrant (speaks Tokyo Tyrant's TCP/IP protocol).
 %%% @version   0.1
 %%% @reference See <a href="http://tokyocabinet.sourceforge.net/tyrantdoc/">Tokyo Tyrant Docs</a> for more info.
 %%% @since     Sat Jan 24 16:41:41 SGT 2009 by Harish Mallipeddi
