@@ -23,7 +23,7 @@ putcat() ->
 
 putsh1() ->
     ok = tora:put("putsh1", <<"foo">>),
-    % append "bar" to the end and shift to the lift to retain the width of "4"
+    % append "bar" to the end and shift to the left to retain the width of "4"
     ok = tora:putsh1("putsh1", <<"bar">>, 4),
     <<"obar">> = tora:get("putsh1").
 
@@ -54,10 +54,27 @@ iter() ->
     ok = tora:iterinit(),
     "a" = tora:iternext(). % "a" should be the first key
 
+fwmkeys() ->
+    ok = tora:put("fwmkeys1", <<"1">>),
+    ok = tora:put("fwmkeys2", <<"2">>),
+    ok = tora:put("fwmkeys3", <<"3">>),
+    ok = tora:put("fwmkeys4", <<"4">>),
+
+    Keys1 = tora:fwmkeys("fwmkeys", 4),
+    ?assertEqual(4, length(Keys1)),
+    ?assert(lists:member("fwmkeys1", Keys1)),
+    ?assert(lists:member("fwmkeys2", Keys1)),
+    ?assert(lists:member("fwmkeys3", Keys1)),
+    ?assert(lists:member("fwmkeys4", Keys1)),
+
+    Keys2 = tora:fwmkeys("fwmkeys", 2),
+    ?assertEqual(2, length(Keys2)).
+    
+
 % test generators
 put_tests() ->
     [fun put_get/0, fun putkeep/0, fun putcat/0, fun putsh1/0, fun putnr/0].
 gen_test_() ->
-    Tests = [put_tests(), fun out/0, fun mget/0, fun vsiz/0, fun iter/0],
+    Tests = [put_tests(), fun out/0, fun mget/0, fun vsiz/0, fun iter/0, fun fwmkeys/0],
     {inorder, {setup, fun setup/0, Tests}}.
 

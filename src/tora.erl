@@ -37,13 +37,14 @@
 -define(CID_VSIZ, <<16#c838:16>>).
 -define(CID_ITERINIT, <<16#c850:16>>).
 -define(CID_ITERNEXT, <<16#c851:16>>).
+-define(CID_FWMKEYS, <<16#c858:16>>).
 
 %% API
 -export([
     connect/0, connect/2, 
     put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
-    get/1, mget/1, vsiz/1,
-    iterinit/0, iternext/0
+    get/1, mget/1, vsiz/1, iterinit/0, iternext/0,
+    fwmkeys/2
 ]).
 
 %% gen_server callbacks
@@ -82,12 +83,15 @@ put(Key, Value) when is_list(Key) andalso is_binary(Value) ->
 putkeep(Key, Value) when is_list(Key) andalso is_binary(Value) ->
     gen_server:call(?SERVER, {putkeep, {list_to_binary(Key), Value}}).
 
+%% @doc append Value to the end
 putcat(Key, Value) when is_list(Key) andalso is_binary(Value) ->
     gen_server:call(?SERVER, {putcat, {list_to_binary(Key), Value}}).
 
+%% @doc append Value to the end and shift to the left to retain the Width supplied
 putsh1(Key, Value, Width) when is_list(Key) andalso is_binary(Value) andalso is_integer(Width) ->
     gen_server:call(?SERVER, {putsh1, {list_to_binary(Key), Value, Width}}).    
 
+%% @doc store the key, value pair but don't wait for response from the server
 putnr(Key, Value) when is_list(Key) andalso is_binary(Value) ->
     gen_server:cast(?SERVER, {putnr, {list_to_binary(Key), Value}}).
 
@@ -113,6 +117,10 @@ iterinit() -> gen_server:call(?SERVER, {iterinit}).
 
 %% @doc return the next key from the iterator
 iternext() -> gen_server:call(?SERVER, {iternext}).
+
+%% @doc return keys which start with the given Prefix (a maximum of MaxKeys are returned)
+fwmkeys(Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) -> 
+    gen_server:call(?SERVER, {fwmkeys, {list_to_binary(Prefix), MaxKeys}}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -160,7 +168,7 @@ handle_call({mget, {BKeys}}, _From, #state{socket=Sock}) ->
                 )
             ),
     gen_tcp:send(Sock, iolist_to_binary([?CID_MGET, <<KeysCount:32>>, Bins])),
-    Handler = fun(Reply) -> recv_mget_reply(Sock, Reply) end,
+    Handler = fun(Reply) -> recv_mget(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}};
 
 handle_call({vsiz, {Key}}, _From, #state{socket=Sock}) ->
@@ -176,7 +184,13 @@ handle_call({iterinit}, _From, #state{socket=Sock}) ->
 handle_call({iternext}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, ?CID_ITERNEXT),
     Handler = fun(Reply) -> recv_size_data(Sock, Reply) end,
-    {reply, binary_to_list(rr(Handler)), #state{socket=Sock}}.
+    {reply, binary_to_list(rr(Handler)), #state{socket=Sock}};
+
+handle_call({fwmkeys, {Prefix, MaxKeys}}, _From, #state{socket=Sock}) ->
+    PrefixSize = byte_size(Prefix),
+    gen_tcp:send(Sock, iolist_to_binary([?CID_FWMKEYS, <<PrefixSize:32>>, <<MaxKeys:32>>, Prefix])),
+    Handler = fun(Reply) -> recv_fwmkeys(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
     gen_tcp:send(Sock, iolist_to_binary([?CID_PUTNR, ?KEYSIZE, ?VALSIZE, Key, Value])),
@@ -203,7 +217,8 @@ rr(Handler) ->
     after ?TIMEOUT -> timeout
     end.
 
-recv_mget_reply(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
+recv_mget(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
+recv_fwmkeys(Sock, Reply) -> recv_count_2tuple(Sock, Reply).
 
 %%====================================================================
 %% Generic handlers for common reply formats
@@ -215,7 +230,7 @@ recv_success(_Sock, {tcp, _, ?SUCCESS}) -> ok.
 %% receive 8-bit success flag + 32-bit int
 recv_size(_Sock, {tcp, _, <<0:8, ValSize:32>>}) -> ValSize.
 
-%% receive 8-bit success flag + 32-bit int representing length + data of the given length
+%% receive 8-bit success flag + length1 + data1
 recv_size_data(Sock, Reply) ->
     case Reply of
         {tcp, _, <<0:8, Length:32, Rest/binary>>} ->
@@ -223,7 +238,7 @@ recv_size_data(Sock, Reply) ->
             Value
     end.
 
-%% receive 8-bit success flag + int + (int, int, data1, data2)*
+%% receive 8-bit success flag + count + (length1, length2, data1, data2)*count
 recv_count_4tuple(Sock, Reply) ->
     case Reply of
         {tcp, _, <<0:8, RecCnt:32, Rest/binary>>} ->
@@ -238,7 +253,21 @@ recv_count_4tuple(Sock, Reply) ->
                         ),
             KVS
     end.
-    
+
+%% receive 8-bit success flag + count + (length1, data1)*count
+recv_count_2tuple(Sock, Reply) ->
+    case Reply of
+        {tcp, _, <<0:8, Cnt:32, Rest/binary>>} ->
+            {Keys, _} = lists:mapfoldl(
+                            fun(_N, Acc) ->
+                                <<KeySize:32, Bin/binary>> = Acc,
+                                {Key, Rest1} = recv_until(Sock, Bin, KeySize),
+                                {binary_to_list(Key), Rest1}
+                            end,
+                            Rest, lists:seq(1, Cnt)
+                        ),
+            Keys
+    end.
 
 %%====================================================================
 %% Utils
