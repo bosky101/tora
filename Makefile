@@ -1,4 +1,10 @@
+APP_NAME="merle"
+VSN="0.1"
+
 all: compile
+
+docs: 
+	erl -noshell -run edoc_run application "'$(APP_NAME)'" '"."' '$(VSN)'
 
 compile: clean
 	erlc -o ebin/ src/*.erl
