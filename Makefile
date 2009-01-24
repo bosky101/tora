@@ -1,4 +1,4 @@
-APP_NAME="merle"
+APP_NAME="tora"
 VSN="0.1"
 
 all: compile

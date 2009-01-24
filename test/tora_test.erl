@@ -94,8 +94,8 @@ put_tests() ->
 gen_test_() ->
     Tests = [
             put_tests(), fun test_out/0, fun test_mget/0, fun test_vsiz/0, fun test_iter/0, fun test_fwmkeys/0,
-            fun test_addint/0, fun() -> ?assertEqual(ok, tora:sync()) end, fun test_vanish/0,
-            fun test_rnum/0, fun() -> tora:size() end, fun() -> tora:stat() end
+            fun test_addint/0, fun() -> ?assertEqual(ok, tora:sync()) end, 
+            fun test_vanish/0, fun test_rnum/0, fun() -> tora:size() end, fun() -> tora:stat() end
         ],
     {inorder, {setup, fun setup/0, Tests}}.
 

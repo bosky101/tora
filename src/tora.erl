@@ -2,7 +2,9 @@
 %%% File:      tora.erl
 %%% @author    Harish Mallipeddi <harish.mallipeddi@gmail.com>
 %%% @copyright 2009 Harish Mallipeddi
-%%% @doc       An Erlang client for Tokyo Tyrant (speaks Tokyo Tyrant's TCP/IP protocol).
+%%% @doc
+%%% An Erlang client for Tokyo Tyrant (speaks Tokyo Tyrant's TCP/IP protocol).
+%%% @end
 %%% @version   0.1
 %%% @reference See <a href="http://tokyocabinet.sourceforge.net/tyrantdoc/">Tokyo Tyrant Docs</a> for more info.
 %%% @since     Sat Jan 24 16:41:41 SGT 2009 by Harish Mallipeddi
@@ -25,7 +27,7 @@
 
 -define(SUCCESS, <<0:8>>).
 
-%% Tokyo Tyrant protocol - Command IDs
+%% Command IDs
 -define(CID_PUT, <<16#c810:16>>).
 -define(CID_PUTKEEP, <<16#c811:16>>).
 -define(CID_PUTCAT, <<16#c812:16>>).
@@ -39,22 +41,32 @@
 -define(CID_ITERNEXT, <<16#c851:16>>).
 -define(CID_FWMKEYS, <<16#c858:16>>).
 -define(CID_ADDINT, <<16#c860:16>>).
+-define(CID_ADDDOUBLE, <<16#c861:16>>).
+-define(CID_ADDEXT, <<16#c868:16>>).
 -define(CID_SYNC, <<16#c870:16>>).
 -define(CID_VANISH, <<16#c871:16>>).
+-define(CID_COPY, <<16#c872:16>>).
+-define(CID_RESTORE, <<16#c873:16>>).
+-define(CID_SETMST, <<16#c878:16>>).
 -define(CID_RNUM, <<16#c880:16>>).
 -define(CID_SIZE, <<16#c881:16>>).
 -define(CID_STAT, <<16#c888:16>>).
+-define(CID_MISC, <<16#c890:16>>).
+
+%% Scripting extension options (defined in tcrdb.h)
+-define(LOCK_RECORD, <<1:32>>). % RDBXOLCKREC (record-level locking)
+-define(LOCK_GLOBAL, <<2:32>>). % RDBXOLCKGLB (global locking)
 
 %% API
 -export([
     connect/0, connect/2, 
     put/2, putkeep/2, putcat/2, putsh1/3, putnr/2, out/1,
     get/1, mget/1, vsiz/1, iterinit/0, iternext/0,
-    fwmkeys/2, addint/2, sync/0, vanish/0,
+    fwmkeys/2, addint/2, adddouble/3, sync/0, vanish/0,
     rnum/0, size/0, stat/0
 ]).
-%% -export([ext/?, adddouble/3]).
-%% -export([copy/?, restore/?, setmst/?]).
+-export([ext/4, misc/3]). % NOT IMPLEMENTED
+-export([copy/1, restore/2, setmst/2]). % NOT TESTED
 
 %% gen_server callbacks
 -export([
@@ -131,9 +143,14 @@ iternext() -> gen_server:call(?SERVER, {iternext}).
 fwmkeys(Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) -> 
     gen_server:call(?SERVER, {fwmkeys, {list_to_binary(Prefix), MaxKeys}}).
 
-%% @doc add integer N to the value and return the sum
+%% @doc add integer to the value and return the summation value
 addint(Key, N) when is_list(Key) andalso is_integer(N) ->
     gen_server:call(?SERVER, {addint, {list_to_binary(Key), N}}).
+
+%% @doc add a real number to the value and return the summation value (NOT TESTED)
+adddouble(Key, Integral, Fractional) 
+    when is_list(Key) andalso is_integer(Integral) andalso is_integer(Fractional) ->
+        gen_server:call(?SERVER, {adddouble, {list_to_binary(Key), Integral, Fractional}}).
 
 %% @doc sync updates to file/device.
 sync() -> gen_server:call(?SERVER, {sync}).
@@ -149,6 +166,35 @@ size() -> gen_server:call(?SERVER, {size}).
 
 %% @doc status message of the database
 stat() -> gen_server:call(?SERVER, {stat}).
+
+%% @doc
+%% copy database to a different file (NOT TESTED)<br/>
+%%  Path - specifies the path of the destination file. If it begins with `@', the trailing substring is executed as a command line.<br/>
+%% @end
+copy(Path) when is_list(Path) ->
+    gen_server:call(?SERVER, {copy, {list_to_binary(Path)}}).
+
+%% @doc 
+%% restore database file from update log (NOT TESTED)<br/>
+%%  Path - specifies the path of the update log directory. If it begins with `+', the trailing substring is treated as the path and consistency checking is omitted.<br/>
+%%  TS - specifies the beginning timestamp in microseconds.<br/>
+%% @end
+restore(Path, TS) when is_list(Path) andalso is_integer(TS) ->
+    gen_server:call(?SERVER, {restore, {list_to_binary(Path), TS}}).
+
+%% @doc 
+%% set the replication master (NOT TESTED)<br/>
+%%  Host - specifies the name/address of the server.<br/>
+%%  Port - specifies the port number.<br/>
+%% @end
+setmst(Host, Port) when is_list(Host) andalso is_integer(Port) ->
+    gen_server:call(?SERVER, {setmst, {list_to_binary(Host), Port}}).
+
+%% @doc execute external script extensions (NOT IMPLEMENTED)
+ext(_FnName, _Opts, _Key, _Value) -> {error, not_implemented}.
+
+%% @doc execute misc functions (NOT IMPLEMENTED)
+misc(_FnName, _Opts, _Args) -> {error, not_implemented}.
 
 %%====================================================================
 %% gen_server callbacks
@@ -225,6 +271,11 @@ handle_call({addint, {Key, N}}, _From, #state{socket=Sock}) ->
     Handler = fun(Reply) -> recv_addint(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}};
 
+handle_call({adddouble, {Key, Integral, Fractional}}, _From, #state{socket=Sock}) ->
+    gen_tcp:send(Sock, iolist_to_binary([?CID_ADDDOUBLE, ?KEYSIZE, <<Integral:64>>, <<Fractional:64>>, Key])),
+    Handler = fun(Reply) -> recv_adddouble(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
 handle_call({sync}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, ?CID_SYNC),
     Handler = fun(Reply) -> recv_success(Sock, Reply) end,
@@ -248,6 +299,24 @@ handle_call({size}, _From, #state{socket=Sock}) ->
 handle_call({stat}, _From, #state{socket=Sock}) ->
     gen_tcp:send(Sock, ?CID_STAT),
     Handler = fun(Reply) -> recv_stat(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({copy, {Path}}, _From, #state{socket=Sock}) ->
+    PathSize = byte_size(Path),
+    gen_tcp:send(Sock, iolist_to_binary([?CID_COPY, <<PathSize:32>>, Path])),
+    Handler = fun(Reply) -> recv_success(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({restore, {Path, TS}}, _From, #state{socket=Sock}) ->
+    PathSize = byte_size(Path),
+    gen_tcp:send(Sock, iolist_to_binary([?CID_RESTORE, <<PathSize:32>>, <<TS:64>>, Path])),
+    Handler = fun(Reply) -> recv_success(Sock, Reply) end,
+    {reply, rr(Handler), #state{socket=Sock}};
+
+handle_call({setmst, {Host, Port}}, _From, #state{socket=Sock}) ->
+    HostSize = byte_size(Host),
+    gen_tcp:send(Sock, iolist_to_binary([?CID_SETMST, <<HostSize:32>>, <<Port:32>>, Host])),
+    Handler = fun(Reply) -> recv_success(Sock, Reply) end,
     {reply, rr(Handler), #state{socket=Sock}}.
 
 handle_cast({putnr, {Key, Value}}, #state{socket=Sock}) ->
@@ -278,6 +347,7 @@ rr(Handler) ->
 recv_mget(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
 recv_fwmkeys(Sock, Reply) -> recv_count_2tuple(Sock, Reply).
 recv_addint(Sock, Reply) -> recv_size(Sock, Reply).
+recv_adddouble(Sock, Reply) -> recv_size64_size64(Sock, Reply).
 recv_stat(Sock, Reply) -> recv_size_data(Sock, Reply).
 
 %%====================================================================
@@ -292,6 +362,9 @@ recv_size(_Sock, {tcp, _, <<0:8, ValSize:32>>}) -> ValSize.
 
 %% receive 8-bit success flag + 64-bit int
 recv_size64(_Sock, {tcp, _, <<0:8, ValSize:64>>}) -> ValSize.
+
+%% receive 8-bit success flag + 64-bit int + 64-bit int
+recv_size64_size64(_Sock, {tcp, _, <<0:8, V1:64, V2:64>>}) -> {V1, V2}.
 
 %% receive 8-bit success flag + length1 + data1
 recv_size_data(Sock, Reply) ->
