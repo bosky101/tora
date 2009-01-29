@@ -10,13 +10,14 @@ compile: clean
 	erlc -o ebin/ src/*.erl
 
 clean:
-	rm -rfv ebin/*.beam
+	rm -rfv ebin/
+	mkdir ebin
 
 # Testing with a Tokyo Tyrant server instance
 test: clean ttclean ttstartd runtest ttstopd
 runtest:
-	erlc -DTEST -I test/ -o ebin/ src/tora.erl
-	erl -pa ebin/ -noshell -s tora test -s init stop
+	erlc -DTEST -I test/ -o ebin/ src/*.erl
+	erl -pa ebin/ -noshell -s tora_conn test -s tora test -s init stop
 ttclean:
 	rm -f /tmp/ttserver.pid /tmp/ttserver.tcb
 ttstartd:
