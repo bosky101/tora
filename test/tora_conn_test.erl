@@ -2,6 +2,17 @@ start_stop_test() ->
     {ok, Pid} = tora_conn:start(),
     ok = tora_conn:stop(Pid).
 
+start_link_test() ->
+    process_flag(trap_exit, true),
+    {ok, Pid} = tora_conn:start_link(),
+    exit(Pid, forced_death),
+    true = receive
+        {'EXIT', Pid, forced_death} -> true;
+        _ -> false
+    after ?TIMEOUT -> false
+    end,
+    process_flag(trap_exit, false).
+
 put_get_test() ->
     {ok, Pid} = tora_conn:start(),
     ok = tora_conn:put(Pid, "put_get1", <<"harish">>),

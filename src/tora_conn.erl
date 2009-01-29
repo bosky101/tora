@@ -27,7 +27,7 @@
 -define(CID_RNUM, <<16#c880:16>>).
 
 -export([
-        start/0, start/2, stop/1, stop/2, 
+        start/0, start/2, start_link/0, start_link/2, stop/1, stop/2,
         put/3, put/4, get/2, get/3, 
         vanish/1, vanish/2, rnum/1, rnum/2
     ]).
@@ -46,8 +46,17 @@
 start() ->
     start(?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
 start(Host, Port) when is_list(Host) andalso is_integer(Port) ->
+    start(fun spawn/1, Host, Port).
+
+start_link() ->
+    start_link(?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
+start_link(Host, Port) when is_list(Host) andalso is_integer(Port) ->
+    start(fun spawn_link/1, Host, Port).
+
+%% @private
+start(SpawnMethod, Host, Port) ->
     Self = self(),
-    Pid = spawn(fun() -> init([Host, Port, Self]) end),
+    Pid = SpawnMethod(fun() -> init([Host, Port, Self]) end),
     receive
         {init, Pid, ok} -> {ok, Pid};
         {init, Pid, {error, Reason}} -> {error, Reason};
