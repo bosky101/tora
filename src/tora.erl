@@ -44,7 +44,8 @@
 
 %% API
 -export([
-    start/1, start/3, start_link/1, start_link/3, stop/1,
+    start/1, start/3, start_link/1, start_link/3, stop/1, 
+    add_to_pool/1, add_to_pool/3, connections_in_pool/1,
     put/3, get/2, 
     rnum/1, vanish/1
 ]).
@@ -91,6 +92,18 @@ start_link(PoolId) when is_atom(PoolId) ->
 start_link(PoolId, Host, Port) when is_atom(PoolId) andalso is_list(Host) andalso is_integer(Port) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [PoolId, Host, Port], []).
 
+%% @doc spawn a new connection handler and add it to the pool
+add_to_pool(PoolId) when is_atom(PoolId) ->
+    gen_server:call(?SERVER, {PoolId, add_to_pool}).
+
+%% @doc spawn a new connection handler with the given (host, port) and add it to the pool
+add_to_pool(PoolId, Host, Port) when is_atom(PoolId) andalso is_list(Host) andalso is_integer(Port) ->
+    gen_server:call(?SERVER, {PoolId, add_to_pool, {Host, Port}}).
+
+%% @doc return the number of connections currently present in the pool
+connections_in_pool(PoolId) when is_atom(PoolId) ->
+    gen_server:call(?SERVER, {PoolId, connections_in_pool}).
+
 stop(PoolId) when is_atom(PoolId) ->
     gen_server:call(?SERVER, {PoolId, terminate}).
 
@@ -105,7 +118,7 @@ get(PoolId, Key) when is_list(Key) ->
 %% @doc remove all records
 vanish(PoolId) -> gen_server:call(?SERVER, {PoolId, vanish}).
 
-%% @doc total number of records
+%% @doc return total number of records
 rnum(PoolId) -> gen_server:call(?SERVER, {PoolId, rnum}).
 
 %%====================================================================
@@ -129,6 +142,25 @@ handle_call({PoolId, terminate}, _From, #state{pools=Pools}) ->
         end),
     Pools1 = gb_trees:delete(PoolId, Pools),
     {reply, ok, #state{pools=Pools1}};
+
+handle_call({PoolId, add_to_pool}, _From, #state{pools=Pools}) ->
+    {value, Pool} = gb_trees:lookup(PoolId, Pools),
+    #pool{id=PoolId, connections=Connections} = Pool,
+    % use the same (host, port) from the first connection created
+    {_, #connection{host=Host, port=Port}} = gb_trees:smallest(Connections),
+    Pool1 = add_conn(Pool, Host, Port),
+    Pools1 = gb_trees:enter(PoolId, Pool1, Pools),
+    {reply, ok, #state{pools=Pools1}};
+handle_call({PoolId, add_to_pool, {Host, Port}}, _From, #state{pools=Pools}) ->
+    {value, Pool} = gb_trees:lookup(PoolId, Pools),
+    Pool1 = add_conn(Pool, Host, Port),
+    Pools1 = gb_trees:enter(PoolId, Pool1, Pools),
+    {reply, ok, #state{pools=Pools1}};    
+
+handle_call({PoolId, connections_in_pool}, _From, #state{pools=Pools}) ->
+    {value, #pool{connections=Connections}} = gb_trees:lookup(PoolId, Pools),
+    PoolSize = gb_trees:size(Connections),
+    {reply, PoolSize, #state{pools=Pools}};
 
 handle_call({PoolId, put, {Key, Value}}, From, #state{pools=Pools}) ->
     Pools1 = with_connection(
@@ -170,6 +202,12 @@ terminate(_Reason, #state{pools=_Pools}) ->
 %%====================================================================
 %% Private stuff
 %%====================================================================
+add_conn(Pool, Host, Port) ->
+    #pool{id=PoolId, connections=Connections} = Pool,
+    {ok, ConnPid} = tora_conn:start(Host, Port),
+    Connection = #connection{pid=ConnPid, host=Host, port=Port},
+    Connections1 = gb_trees:enter(#connid{lf=0, pid=ConnPid}, Connection, Connections),
+    #pool{id=PoolId, connections=Connections1}.
 
 with_connection(PoolId, Pools, F) ->
     % get a connnection handler

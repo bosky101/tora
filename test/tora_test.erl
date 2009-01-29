@@ -5,6 +5,11 @@ setup() ->
 cleanup(_Foo) ->
     ok = tora:stop(mypool).
 
+
+test_add_to_pool() ->
+    ok = tora:add_to_pool(mypool), % add another connection handler
+    ?assertEqual(2, tora:connections_in_pool(mypool)).
+    
 test_put_get() ->
     ok = tora:put(mypool, "put_get1", <<"harish">>),
     ok = tora:put(mypool, "put_get2", <<2#1101:32>>),
@@ -26,6 +31,7 @@ test_rnum() ->
 
 gen_test_() ->
     Tests = [
+            fun test_add_to_pool/0,
             fun test_put_get/0, 
             fun test_vanish/0, fun test_rnum/0
         ],
