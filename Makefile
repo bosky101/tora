@@ -1,5 +1,5 @@
 APP_NAME="tora"
-VSN="0.1"
+VSN="0.2"
 
 all: compile
 

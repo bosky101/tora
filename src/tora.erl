@@ -46,9 +46,13 @@
 -export([
     start/1, start/3, start_link/1, start_link/3, stop/1, 
     add_to_pool/1, add_to_pool/3, pool_size/1, pool_connections/1, pool_create/1, pool_create/3,
-    put/3, get/2, 
-    rnum/1, vanish/1
+    put/3, putkeep/3, putcat/3, putsh1/4, putnr/3, out/2,
+    get/2, mget/2, vsiz/2, iterinit/1, iternext/1, 
+    fwmkeys/3, addint/3, adddouble/4, sync/1, vanish/1,
+    rnum/1, size/1, stat/1
 ]).
+%% -export([ext/4, misc/3]). % NOT IMPLEMENTED
+-export([copy/2, restore/3, setmst/3]). % NOT TESTED
 
 %% gen_server callbacks
 -export([
@@ -85,13 +89,13 @@
 
 %% @doc
 %% Start the tora gen_server and create a default pool with the given PoolId <br/>
-%% and add one connection to this pool (connection assumes default hostname & port).
+%% and add one connection to this pool (connection assumes default hostname and port).
 %% @end
 start(PoolId) when is_atom(PoolId) ->
     start(PoolId, ?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
 %% @doc
 %% Start the tora gen_server and create a default pool with the given PoolId <br/>
-%% and add one connection to this pool (connection uses the supplied hostname & port).
+%% and add one connection to this pool (connection uses the supplied hostname and port).
 %% @end
 start(PoolId, Host, Port) when is_atom(PoolId) andalso is_list(Host) andalso is_integer(Port) ->
     gen_server:start({local, ?SERVER}, ?MODULE, [PoolId, Host, Port], []).
@@ -117,10 +121,10 @@ pool_size(PoolId) when is_atom(PoolId) ->
 pool_connections(PoolId) when is_atom(PoolId) ->
     gen_server:call(?SERVER, {PoolId, pool_connections}).
 
-%% @doc create a new pool (also automatically creates 1 connection to default host & port)
+%% @doc create a new pool (also automatically creates 1 connection to default host and port)
 pool_create(PoolId) ->
     pool_create(PoolId, ?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
-%% @doc create a new pool (also automatically creates 1 connection to supplied host & port)
+%% @doc create a new pool (also automatically creates 1 connection to supplied host and port)
 pool_create(PoolId, Host, Port) when is_atom(PoolId) ->
     gen_server:call(?SERVER, {PoolId, pool_create, {Host, Port}}).
 
@@ -132,15 +136,97 @@ stop(PoolId) when is_atom(PoolId) ->
 put(PoolId, Key, Value) when is_list(Key) andalso is_binary(Value) ->
     gen_server:call(?SERVER, {PoolId, put, {Key, Value}}).
 
+%% @doc 
+%% store the given key, value pair only if the given key does not exist already.
+%% if it already exists, will throw an error.
+%% @end
+putkeep(PoolId, Key, Value) when is_list(Key) andalso is_binary(Value) ->
+    gen_server:call(?SERVER, {PoolId, putkeep, {Key, Value}}).
+
+%% @doc append Value to the end
+putcat(PoolId, Key, Value) when is_list(Key) andalso is_binary(Value) ->
+    gen_server:call(?SERVER, {PoolId, putcat, {Key, Value}}).
+
+%% @doc append Value to the end and shift to the left to retain the Width supplied
+putsh1(PoolId, Key, Value, Width) when is_list(Key) andalso is_binary(Value) andalso is_integer(Width) ->
+    gen_server:call(?SERVER, {PoolId, putsh1, {Key, Value, Width}}).    
+
+%% @doc store the key, value pair but don't wait for response from the server
+putnr(PoolId, Key, Value) when is_list(Key) andalso is_binary(Value) ->
+    gen_server:cast(?SERVER, {PoolId, putnr, {Key, Value}}).
+
+%% @doc remove the record corresponding to the given key
+out(PoolId, Key) when is_list(Key) ->
+    gen_server:call(?SERVER, {PoolId, out, {Key}}).
+
 %% @doc get the value for the given key
 get(PoolId, Key) when is_list(Key) ->
     gen_server:call(?SERVER, {PoolId, get, {Key}}).
+
+%% @doc multi-get
+mget(PoolId, Keys) when is_list(Keys) ->
+    gen_server:call(?SERVER, {PoolId, mget, {Keys}}).
+
+%% @doc return the size of the value for the given key
+vsiz(PoolId, Key) when is_list(Key) ->
+    gen_server:call(?SERVER, {PoolId, vsiz, {Key}}).
+
+%% @doc initialize the iterator to iterate over keys
+iterinit(PoolId) -> gen_server:call(?SERVER, {PoolId, iterinit}).
+
+%% @doc return the next key from the iterator
+iternext(PoolId) -> gen_server:call(?SERVER, {PoolId, iternext}).
+
+%% @doc return keys which start with the given Prefix (a maximum of MaxKeys are returned)
+fwmkeys(PoolId, Prefix, MaxKeys) when is_list(Prefix) andalso is_integer(MaxKeys) -> 
+    gen_server:call(?SERVER, {PoolId, fwmkeys, {Prefix, MaxKeys}}).
+
+%% @doc add integer to the value and return the summation value
+addint(PoolId, Key, N) when is_list(Key) andalso is_integer(N) ->
+    gen_server:call(?SERVER, {PoolId, addint, {Key, N}}).
+
+%% @doc add a real number to the value and return the summation value (NOT TESTED)
+adddouble(PoolId, Key, Integral, Fractional) 
+    when is_list(Key) andalso is_integer(Integral) andalso is_integer(Fractional) ->
+        gen_server:call(?SERVER, {PoolId, adddouble, {Key, Integral, Fractional}}).
+
+%% @doc sync updates to file/device.
+sync(PoolId) -> gen_server:call(?SERVER, {PoolId, sync}).
 
 %% @doc remove all records
 vanish(PoolId) -> gen_server:call(?SERVER, {PoolId, vanish}).
 
 %% @doc return total number of records
 rnum(PoolId) -> gen_server:call(?SERVER, {PoolId, rnum}).
+
+%% @doc size of the database
+size(PoolId) -> gen_server:call(?SERVER, {PoolId, size}).
+
+%% @doc status message of the database
+stat(PoolId) -> gen_server:call(?SERVER, {PoolId, stat}).
+
+%% @doc
+%% copy database to a different file (NOT TESTED)<br/>
+%%  Path - specifies the path of the destination file. If it begins with `@', the trailing substring is executed as a command line.<br/>
+%% @end
+copy(PoolId, Path) when is_list(Path) ->
+    gen_server:call(?SERVER, {PoolId, copy, {Path}}).
+
+%% @doc 
+%% restore database file from update log (NOT TESTED)<br/>
+%%  Path - specifies the path of the update log directory. If it begins with `+', the trailing substring is treated as the path and consistency checking is omitted.<br/>
+%%  TS - specifies the beginning timestamp in microseconds.<br/>
+%% @end
+restore(PoolId, Path, TS) when is_list(Path) andalso is_integer(TS) ->
+    gen_server:call(?SERVER, {PoolId, restore, {Path, TS}}).
+
+%% @doc 
+%% set the replication master (NOT TESTED)<br/>
+%%  Host - specifies the name/address of the server.<br/>
+%%  Port - specifies the port number.<br/>
+%% @end
+setmst(PoolId, Host, Port) when is_list(Host) andalso is_integer(Port) ->
+    gen_server:call(?SERVER, {PoolId, setmst, {Host, Port}}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -200,35 +286,30 @@ handle_call({PoolId, pool_connections}, _From, #state{pools=Pools, conns=Conns})
 handle_call({PoolId, pool_create, {Host, Port}}, _From, State) ->
     {reply, ok, create_pool(PoolId, Host, Port, State)};
 
-handle_call({PoolId, put, {Key, Value}}, From, #state{pools=Pools, conns=Conns}) ->
+%% match all remaining API calls
+handle_call({PoolId, Method}, From, State) when is_atom(Method) ->
+    handle_call({PoolId, Method, {}}, From, State);
+handle_call({PoolId, Method, ArgsTuple}, From, #state{pools=Pools, conns=Conns}) 
+    when is_atom(Method) andalso is_tuple(ArgsTuple) ->
     Pools1 = with_connection(
         PoolId, Pools,
-        fun(ConnHandler) -> tora_conn:put(ConnHandler, Key, Value, From) end
-    ),
-    {noreply, #state{pools=Pools1, conns=Conns}};
-
-handle_call({PoolId, get, {Key}}, From, #state{pools=Pools, conns=Conns}) ->
-    Pools1 = with_connection(
-        PoolId, Pools,
-        fun(ConnHandler) -> tora_conn:get(ConnHandler, Key, From) end
-    ),
-    {noreply, #state{pools=Pools1, conns=Conns}};
-
-handle_call({PoolId, vanish}, From, #state{pools=Pools, conns=Conns}) ->
-    Pools1 = with_connection(
-        PoolId, Pools,
-        fun(ConnHandler) -> tora_conn:vanish(ConnHandler, From) end
-    ),
-    {noreply, #state{pools=Pools1, conns=Conns}};
-
-handle_call({PoolId, rnum}, From, #state{pools=Pools, conns=Conns}) ->
-    Pools1 = with_connection(
-        PoolId, Pools,
-        fun(ConnHandler) -> tora_conn:rnum(ConnHandler, From) end
+        fun(ConnHandler) ->
+            InvokeArgs = [ConnHandler] ++ tuple_to_list(ArgsTuple) ++ [From],
+            erlang:apply(tora_conn, Method, InvokeArgs)
+        end
     ),
     {noreply, #state{pools=Pools1, conns=Conns}}.
 
-handle_cast(_Msg, State) -> {noreply, State}.
+handle_cast({PoolId, Method, ArgsTuple}, #state{pools=Pools, conns=Conns}) 
+    when is_atom(Method) andalso is_tuple(ArgsTuple) ->
+    Pools1 = with_connection(
+        PoolId, Pools,
+        fun(ConnHandler) ->
+            InvokeArgs = [ConnHandler] ++ tuple_to_list(ArgsTuple),
+            erlang:apply(tora_conn, Method, InvokeArgs)
+        end
+    ),
+    {noreply, #state{pools=Pools1, conns=Conns}}.
 
 handle_info({'EXIT', FromPid, _Reason}, #state{pools=Pools, conns=Conns}) ->
     case gb_trees:lookup(FromPid, Conns) of

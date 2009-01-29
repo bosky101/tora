@@ -68,14 +68,14 @@
 %% Public API
 %%====================================================================
 
-%% @doc start a connection handler (assumes default host & port)
+%% @doc start a connection handler (assumes default host and port)
 start() ->
     start(?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
 %% @doc start a connection handler
 start(Host, Port) when is_list(Host) andalso is_integer(Port) ->
     start(fun spawn/1, Host, Port).
 
-%% @doc start a connection handler (assumes default host & port)
+%% @doc start a connection handler (assumes default host and port)
 start_link() ->
     start_link(?TT_DEFAULT_HOST, ?TT_DEFAULT_PORT).
 %% @doc start a connection handler
