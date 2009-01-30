@@ -23,54 +23,73 @@
 <h2><a name="description">Description</a></h2>
    An Erlang client for Tokyo Tyrant (speaks Tokyo Tyrant's TCP/IP protocol).
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#adddouble-3">adddouble/3</a></td><td>add a real number to the value and return the summation value (NOT TESTED).</td></tr>
-<tr><td valign="top"><a href="#addint-2">addint/2</a></td><td>add integer to the value and return the summation value.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_to_pool-1">add_to_pool/1</a></td><td>spawn a new connection handler and add it to an existing pool.</td></tr>
+<tr><td valign="top"><a href="#add_to_pool-3">add_to_pool/3</a></td><td>spawn a new connection handler with the given (host, port) and add it to the pool.</td></tr>
+<tr><td valign="top"><a href="#adddouble-4">adddouble/4</a></td><td>add a real number to the value and return the summation value (NOT TESTED).</td></tr>
+<tr><td valign="top"><a href="#addint-3">addint/3</a></td><td>add integer to the value and return the summation value.</td></tr>
 <tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#connect-0">connect/0</a></td><td>connect to a tokyo tyrant server running on localhost:1978.</td></tr>
-<tr><td valign="top"><a href="#connect-2">connect/2</a></td><td>connect to a tokyo tyrant server running on the given hostname:port.</td></tr>
-<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td>
+<tr><td valign="top"><a href="#copy-2">copy/2</a></td><td>
   copy database to a different file (NOT TESTED).</td></tr>
-<tr><td valign="top"><a href="#ext-4">ext/4</a></td><td>execute external script extensions (NOT IMPLEMENTED).</td></tr>
-<tr><td valign="top"><a href="#fwmkeys-2">fwmkeys/2</a></td><td>return keys which start with the given Prefix (a maximum of MaxKeys are returned).</td></tr>
-<tr><td valign="top"><a href="#get-1">get/1</a></td><td>get the value for the given key.</td></tr>
+<tr><td valign="top"><a href="#fwmkeys-3">fwmkeys/3</a></td><td>return keys which start with the given Prefix (a maximum of MaxKeys are returned).</td></tr>
+<tr><td valign="top"><a href="#get-2">get/2</a></td><td>get the value for the given key.</td></tr>
 <tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#iterinit-0">iterinit/0</a></td><td>initialize the iterator to iterate over keys.</td></tr>
-<tr><td valign="top"><a href="#iternext-0">iternext/0</a></td><td>return the next key from the iterator.</td></tr>
-<tr><td valign="top"><a href="#mget-1">mget/1</a></td><td>multi-get.</td></tr>
-<tr><td valign="top"><a href="#misc-3">misc/3</a></td><td>execute misc functions (NOT IMPLEMENTED).</td></tr>
-<tr><td valign="top"><a href="#out-1">out/1</a></td><td>remove the record corresponding to the given key.</td></tr>
-<tr><td valign="top"><a href="#put-2">put/2</a></td><td>store the given key, value pair.</td></tr>
-<tr><td valign="top"><a href="#putcat-2">putcat/2</a></td><td>append Value to the end.</td></tr>
-<tr><td valign="top"><a href="#putkeep-2">putkeep/2</a></td><td>
+<tr><td valign="top"><a href="#iterinit-1">iterinit/1</a></td><td>initialize the iterator to iterate over keys.</td></tr>
+<tr><td valign="top"><a href="#iternext-1">iternext/1</a></td><td>return the next key from the iterator.</td></tr>
+<tr><td valign="top"><a href="#mget-2">mget/2</a></td><td>multi-get.</td></tr>
+<tr><td valign="top"><a href="#out-2">out/2</a></td><td>remove the record corresponding to the given key.</td></tr>
+<tr><td valign="top"><a href="#pool_connections-1">pool_connections/1</a></td><td>return the list of Pids of the connection handlers in an existing pool.</td></tr>
+<tr><td valign="top"><a href="#pool_create-1">pool_create/1</a></td><td>create a new pool (also automatically creates 1 connection to default host and port).</td></tr>
+<tr><td valign="top"><a href="#pool_create-3">pool_create/3</a></td><td>create a new pool (also automatically creates 1 connection to supplied host and port).</td></tr>
+<tr><td valign="top"><a href="#pool_size-1">pool_size/1</a></td><td>return the number of connections currently present in an existing pool.</td></tr>
+<tr><td valign="top"><a href="#put-3">put/3</a></td><td>store the given key, value pair.</td></tr>
+<tr><td valign="top"><a href="#putcat-3">putcat/3</a></td><td>append Value to the end.</td></tr>
+<tr><td valign="top"><a href="#putkeep-3">putkeep/3</a></td><td>
   store the given key, value pair only if the given key does not exist already.</td></tr>
-<tr><td valign="top"><a href="#putnr-2">putnr/2</a></td><td>store the key, value pair but don't wait for response from the server.</td></tr>
-<tr><td valign="top"><a href="#putsh1-3">putsh1/3</a></td><td>append Value to the end and shift to the left to retain the Width supplied.</td></tr>
-<tr><td valign="top"><a href="#restore-2">restore/2</a></td><td>
+<tr><td valign="top"><a href="#putnr-3">putnr/3</a></td><td>store the key, value pair but don't wait for response from the server.</td></tr>
+<tr><td valign="top"><a href="#putsh1-4">putsh1/4</a></td><td>append Value to the end and shift to the left to retain the Width supplied.</td></tr>
+<tr><td valign="top"><a href="#restore-3">restore/3</a></td><td>
   restore database file from update log (NOT TESTED).</td></tr>
-<tr><td valign="top"><a href="#rnum-0">rnum/0</a></td><td>total number of records.</td></tr>
-<tr><td valign="top"><a href="#setmst-2">setmst/2</a></td><td>
+<tr><td valign="top"><a href="#rnum-1">rnum/1</a></td><td>return total number of records.</td></tr>
+<tr><td valign="top"><a href="#setmst-3">setmst/3</a></td><td>
   set the replication master (NOT TESTED).</td></tr>
-<tr><td valign="top"><a href="#size-0">size/0</a></td><td>size of the database.</td></tr>
-<tr><td valign="top"><a href="#stat-0">stat/0</a></td><td>status message of the database.</td></tr>
-<tr><td valign="top"><a href="#sync-0">sync/0</a></td><td>sync updates to file/device.</td></tr>
+<tr><td valign="top"><a href="#size-1">size/1</a></td><td>size of the database.</td></tr>
+<tr><td valign="top"><a href="#start-1">start/1</a></td><td>
+  Start the tora gen_server and create a default pool with the given PoolId.</td></tr>
+<tr><td valign="top"><a href="#start-3">start/3</a></td><td>
+  Start the tora gen_server and create a default pool with the given PoolId.</td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-3">start_link/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stat-1">stat/1</a></td><td>status message of the database.</td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>stop all connections in an existing pool.</td></tr>
+<tr><td valign="top"><a href="#sync-1">sync/1</a></td><td>sync updates to file/device.</td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#vanish-0">vanish/0</a></td><td>remove all records.</td></tr>
-<tr><td valign="top"><a href="#vsiz-1">vsiz/1</a></td><td>return the size of the value for the given key.</td></tr>
+<tr><td valign="top"><a href="#vanish-1">vanish/1</a></td><td>remove all records.</td></tr>
+<tr><td valign="top"><a href="#vsiz-2">vsiz/2</a></td><td>return the size of the value for the given key.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="adddouble-3">adddouble/3</a></h3>
+<h3 class="function"><a name="add_to_pool-1">add_to_pool/1</a></h3>
 <div class="spec">
-<p><tt>adddouble(Key, Integral, Fractional) -&gt; any()</tt></p>
+<p><tt>add_to_pool(PoolId) -&gt; any()</tt></p>
+</div><p>spawn a new connection handler and add it to an existing pool</p>
+
+<h3 class="function"><a name="add_to_pool-3">add_to_pool/3</a></h3>
+<div class="spec">
+<p><tt>add_to_pool(PoolId, Host, Port) -&gt; any()</tt></p>
+</div><p>spawn a new connection handler with the given (host, port) and add it to the pool</p>
+
+<h3 class="function"><a name="adddouble-4">adddouble/4</a></h3>
+<div class="spec">
+<p><tt>adddouble(PoolId, Key, Integral, Fractional) -&gt; any()</tt></p>
 </div><p>add a real number to the value and return the summation value (NOT TESTED)</p>
 
-<h3 class="function"><a name="addint-2">addint/2</a></h3>
+<h3 class="function"><a name="addint-3">addint/3</a></h3>
 <div class="spec">
-<p><tt>addint(Key, N) -&gt; any()</tt></p>
+<p><tt>addint(PoolId, Key, N) -&gt; any()</tt></p>
 </div><p>add integer to the value and return the summation value</p>
 
 <h3 class="function"><a name="code_change-3">code_change/3</a></h3>
@@ -78,36 +97,21 @@
 <p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="connect-0">connect/0</a></h3>
+<h3 class="function"><a name="copy-2">copy/2</a></h3>
 <div class="spec">
-<p><tt>connect() -&gt; any()</tt></p>
-</div><p>connect to a tokyo tyrant server running on localhost:1978</p>
-
-<h3 class="function"><a name="connect-2">connect/2</a></h3>
-<div class="spec">
-<p><tt>connect(Host, Port) -&gt; any()</tt></p>
-</div><p>connect to a tokyo tyrant server running on the given hostname:port</p>
-
-<h3 class="function"><a name="copy-1">copy/1</a></h3>
-<div class="spec">
-<p><tt>copy(Path) -&gt; any()</tt></p>
+<p><tt>copy(PoolId, Path) -&gt; any()</tt></p>
 </div><p>
   copy database to a different file (NOT TESTED)<br>
    Path - specifies the path of the destination file. If it begins with <code>@</code>, the trailing substring is executed as a command line.<br></p>
 
-<h3 class="function"><a name="ext-4">ext/4</a></h3>
+<h3 class="function"><a name="fwmkeys-3">fwmkeys/3</a></h3>
 <div class="spec">
-<p><tt>ext(FnName, Opts, Key, Value) -&gt; any()</tt></p>
-</div><p>execute external script extensions (NOT IMPLEMENTED)</p>
-
-<h3 class="function"><a name="fwmkeys-2">fwmkeys/2</a></h3>
-<div class="spec">
-<p><tt>fwmkeys(Prefix, MaxKeys) -&gt; any()</tt></p>
+<p><tt>fwmkeys(PoolId, Prefix, MaxKeys) -&gt; any()</tt></p>
 </div><p>return keys which start with the given Prefix (a maximum of MaxKeys are returned)</p>
 
-<h3 class="function"><a name="get-1">get/1</a></h3>
+<h3 class="function"><a name="get-2">get/2</a></h3>
 <div class="spec">
-<p><tt>get(Key) -&gt; any()</tt></p>
+<p><tt>get(PoolId, Key) -&gt; any()</tt></p>
 </div><p>get the value for the given key</p>
 
 <h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
@@ -117,7 +121,7 @@
 
 <h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
 <div class="spec">
-<p><tt>handle_cast(Msg, State) -&gt; any()</tt></p>
+<p><tt>handle_cast(X1, State) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
@@ -130,92 +134,136 @@
 <p><tt>init(X1) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="iterinit-0">iterinit/0</a></h3>
+<h3 class="function"><a name="iterinit-1">iterinit/1</a></h3>
 <div class="spec">
-<p><tt>iterinit() -&gt; any()</tt></p>
+<p><tt>iterinit(PoolId) -&gt; any()</tt></p>
 </div><p>initialize the iterator to iterate over keys</p>
 
-<h3 class="function"><a name="iternext-0">iternext/0</a></h3>
+<h3 class="function"><a name="iternext-1">iternext/1</a></h3>
 <div class="spec">
-<p><tt>iternext() -&gt; any()</tt></p>
+<p><tt>iternext(PoolId) -&gt; any()</tt></p>
 </div><p>return the next key from the iterator</p>
 
-<h3 class="function"><a name="mget-1">mget/1</a></h3>
+<h3 class="function"><a name="mget-2">mget/2</a></h3>
 <div class="spec">
-<p><tt>mget(Keys) -&gt; any()</tt></p>
+<p><tt>mget(PoolId, Keys) -&gt; any()</tt></p>
 </div><p>multi-get</p>
 
-<h3 class="function"><a name="misc-3">misc/3</a></h3>
+<h3 class="function"><a name="out-2">out/2</a></h3>
 <div class="spec">
-<p><tt>misc(FnName, Opts, Args) -&gt; any()</tt></p>
-</div><p>execute misc functions (NOT IMPLEMENTED)</p>
-
-<h3 class="function"><a name="out-1">out/1</a></h3>
-<div class="spec">
-<p><tt>out(Key) -&gt; any()</tt></p>
+<p><tt>out(PoolId, Key) -&gt; any()</tt></p>
 </div><p>remove the record corresponding to the given key</p>
 
-<h3 class="function"><a name="put-2">put/2</a></h3>
+<h3 class="function"><a name="pool_connections-1">pool_connections/1</a></h3>
 <div class="spec">
-<p><tt>put(Key, Value) -&gt; any()</tt></p>
+<p><tt>pool_connections(PoolId) -&gt; any()</tt></p>
+</div><p>return the list of Pids of the connection handlers in an existing pool</p>
+
+<h3 class="function"><a name="pool_create-1">pool_create/1</a></h3>
+<div class="spec">
+<p><tt>pool_create(PoolId) -&gt; any()</tt></p>
+</div><p>create a new pool (also automatically creates 1 connection to default host and port)</p>
+
+<h3 class="function"><a name="pool_create-3">pool_create/3</a></h3>
+<div class="spec">
+<p><tt>pool_create(PoolId, Host, Port) -&gt; any()</tt></p>
+</div><p>create a new pool (also automatically creates 1 connection to supplied host and port)</p>
+
+<h3 class="function"><a name="pool_size-1">pool_size/1</a></h3>
+<div class="spec">
+<p><tt>pool_size(PoolId) -&gt; any()</tt></p>
+</div><p>return the number of connections currently present in an existing pool</p>
+
+<h3 class="function"><a name="put-3">put/3</a></h3>
+<div class="spec">
+<p><tt>put(PoolId, Key, Value) -&gt; any()</tt></p>
 </div><p>store the given key, value pair</p>
 
-<h3 class="function"><a name="putcat-2">putcat/2</a></h3>
+<h3 class="function"><a name="putcat-3">putcat/3</a></h3>
 <div class="spec">
-<p><tt>putcat(Key, Value) -&gt; any()</tt></p>
+<p><tt>putcat(PoolId, Key, Value) -&gt; any()</tt></p>
 </div><p>append Value to the end</p>
 
-<h3 class="function"><a name="putkeep-2">putkeep/2</a></h3>
+<h3 class="function"><a name="putkeep-3">putkeep/3</a></h3>
 <div class="spec">
-<p><tt>putkeep(Key, Value) -&gt; any()</tt></p>
+<p><tt>putkeep(PoolId, Key, Value) -&gt; any()</tt></p>
 </div><p>
   store the given key, value pair only if the given key does not exist already.
   if it already exists, will throw an error.</p>
 
-<h3 class="function"><a name="putnr-2">putnr/2</a></h3>
+<h3 class="function"><a name="putnr-3">putnr/3</a></h3>
 <div class="spec">
-<p><tt>putnr(Key, Value) -&gt; any()</tt></p>
+<p><tt>putnr(PoolId, Key, Value) -&gt; any()</tt></p>
 </div><p>store the key, value pair but don't wait for response from the server</p>
 
-<h3 class="function"><a name="putsh1-3">putsh1/3</a></h3>
+<h3 class="function"><a name="putsh1-4">putsh1/4</a></h3>
 <div class="spec">
-<p><tt>putsh1(Key, Value, Width) -&gt; any()</tt></p>
+<p><tt>putsh1(PoolId, Key, Value, Width) -&gt; any()</tt></p>
 </div><p>append Value to the end and shift to the left to retain the Width supplied</p>
 
-<h3 class="function"><a name="restore-2">restore/2</a></h3>
+<h3 class="function"><a name="restore-3">restore/3</a></h3>
 <div class="spec">
-<p><tt>restore(Path, TS) -&gt; any()</tt></p>
+<p><tt>restore(PoolId, Path, TS) -&gt; any()</tt></p>
 </div><p>
   restore database file from update log (NOT TESTED)<br>
    Path - specifies the path of the update log directory. If it begins with <code>+</code>, the trailing substring is treated as the path and consistency checking is omitted.<br>
    TS - specifies the beginning timestamp in microseconds.<br></p>
 
-<h3 class="function"><a name="rnum-0">rnum/0</a></h3>
+<h3 class="function"><a name="rnum-1">rnum/1</a></h3>
 <div class="spec">
-<p><tt>rnum() -&gt; any()</tt></p>
-</div><p>total number of records</p>
+<p><tt>rnum(PoolId) -&gt; any()</tt></p>
+</div><p>return total number of records</p>
 
-<h3 class="function"><a name="setmst-2">setmst/2</a></h3>
+<h3 class="function"><a name="setmst-3">setmst/3</a></h3>
 <div class="spec">
-<p><tt>setmst(Host, Port) -&gt; any()</tt></p>
+<p><tt>setmst(PoolId, Host, Port) -&gt; any()</tt></p>
 </div><p>
   set the replication master (NOT TESTED)<br>
    Host - specifies the name/address of the server.<br>
    Port - specifies the port number.<br></p>
 
-<h3 class="function"><a name="size-0">size/0</a></h3>
+<h3 class="function"><a name="size-1">size/1</a></h3>
 <div class="spec">
-<p><tt>size() -&gt; any()</tt></p>
+<p><tt>size(PoolId) -&gt; any()</tt></p>
 </div><p>size of the database</p>
 
-<h3 class="function"><a name="stat-0">stat/0</a></h3>
+<h3 class="function"><a name="start-1">start/1</a></h3>
 <div class="spec">
-<p><tt>stat() -&gt; any()</tt></p>
+<p><tt>start(PoolId) -&gt; any()</tt></p>
+</div><p>
+  Start the tora gen_server and create a default pool with the given PoolId <br>
+  and add one connection to this pool (connection assumes default hostname and port).</p>
+
+<h3 class="function"><a name="start-3">start/3</a></h3>
+<div class="spec">
+<p><tt>start(PoolId, Host, Port) -&gt; any()</tt></p>
+</div><p>
+  Start the tora gen_server and create a default pool with the given PoolId <br>
+  and add one connection to this pool (connection uses the supplied hostname and port).</p>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(PoolId) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-3">start_link/3</a></h3>
+<div class="spec">
+<p><tt>start_link(PoolId, Host, Port) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="stat-1">stat/1</a></h3>
+<div class="spec">
+<p><tt>stat(PoolId) -&gt; any()</tt></p>
 </div><p>status message of the database</p>
 
-<h3 class="function"><a name="sync-0">sync/0</a></h3>
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
 <div class="spec">
-<p><tt>sync() -&gt; any()</tt></p>
+<p><tt>stop(PoolId) -&gt; any()</tt></p>
+</div><p>stop all connections in an existing pool</p>
+
+<h3 class="function"><a name="sync-1">sync/1</a></h3>
+<div class="spec">
+<p><tt>sync(PoolId) -&gt; any()</tt></p>
 </div><p>sync updates to file/device.</p>
 
 <h3 class="function"><a name="terminate-2">terminate/2</a></h3>
@@ -223,18 +271,18 @@
 <p><tt>terminate(Reason, State) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="vanish-0">vanish/0</a></h3>
+<h3 class="function"><a name="vanish-1">vanish/1</a></h3>
 <div class="spec">
-<p><tt>vanish() -&gt; any()</tt></p>
+<p><tt>vanish(PoolId) -&gt; any()</tt></p>
 </div><p>remove all records</p>
 
-<h3 class="function"><a name="vsiz-1">vsiz/1</a></h3>
+<h3 class="function"><a name="vsiz-2">vsiz/2</a></h3>
 <div class="spec">
-<p><tt>vsiz(Key) -&gt; any()</tt></p>
+<p><tt>vsiz(PoolId, Key) -&gt; any()</tt></p>
 </div><p>return the size of the value for the given key</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jan 25 2009, 03:39:21.</i></p>
+<p><i>Generated by EDoc, Jan 30 2009, 07:58:13.</i></p>
 </body>
 </html>

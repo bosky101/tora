@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module tora_conn</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module tora_conn</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>ttserver connection handler.
+<p>Copyright © 2009 Harish Mallipeddi</p>
+
+<p><b>Introduced in:</b> Sun Jan 25 20:18:49 SGT 2009 by Harish Mallipeddi
+  -------------------------------------------------------------------</p>
+<p><b>Authors:</b> Harish Mallipeddi (<a href="mailto:harish.mallipeddi@gmail.com"><tt>harish.mallipeddi@gmail.com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>ttserver connection handler
+  
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#adddouble-4">adddouble/4</a></td><td>add a real number to the value and return the summation value (NOT TESTED).</td></tr>
+<tr><td valign="top"><a href="#addint-3">addint/3</a></td><td>add integer to the value and return the summation value.</td></tr>
+<tr><td valign="top"><a href="#copy-2">copy/2</a></td><td>
+  copy database to a different file (NOT TESTED).</td></tr>
+<tr><td valign="top"><a href="#fwmkeys-3">fwmkeys/3</a></td><td>return keys which start with the given Prefix (a maximum of MaxKeys are returned).</td></tr>
+<tr><td valign="top"><a href="#fwmkeys-4">fwmkeys/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get-2">get/2</a></td><td>get the value for the given key.</td></tr>
+<tr><td valign="top"><a href="#iterinit-1">iterinit/1</a></td><td>initialize the iterator to iterate over keys.</td></tr>
+<tr><td valign="top"><a href="#iterinit-2">iterinit/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#iternext-1">iternext/1</a></td><td>return the next key from the iterator.</td></tr>
+<tr><td valign="top"><a href="#iternext-2">iternext/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mget-2">mget/2</a></td><td>multi-get.</td></tr>
+<tr><td valign="top"><a href="#out-2">out/2</a></td><td>remove the record corresponding to the given key.</td></tr>
+<tr><td valign="top"><a href="#put-3">put/3</a></td><td>store the given key, value pair.</td></tr>
+<tr><td valign="top"><a href="#put-4">put/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#putcat-3">putcat/3</a></td><td>append Value to the end.</td></tr>
+<tr><td valign="top"><a href="#putkeep-3">putkeep/3</a></td><td>
+  store the given key, value pair only if the given key does not exist already.</td></tr>
+<tr><td valign="top"><a href="#putnr-3">putnr/3</a></td><td>store the key, value pair but don't wait for response from the server.</td></tr>
+<tr><td valign="top"><a href="#putsh1-4">putsh1/4</a></td><td>append Value to the end and shift to the left to retain the Width supplied.</td></tr>
+<tr><td valign="top"><a href="#restore-3">restore/3</a></td><td>
+  restore database file from update log (NOT TESTED).</td></tr>
+<tr><td valign="top"><a href="#rnum-1">rnum/1</a></td><td>total number of records.</td></tr>
+<tr><td valign="top"><a href="#setmst-3">setmst/3</a></td><td>
+  set the replication master (NOT TESTED).</td></tr>
+<tr><td valign="top"><a href="#size-1">size/1</a></td><td>size of the database.</td></tr>
+<tr><td valign="top"><a href="#start-0">start/0</a></td><td>start a connection handler (assumes default host and port).</td></tr>
+<tr><td valign="top"><a href="#start-2">start/2</a></td><td>start a connection handler.</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>start a connection handler (assumes default host and port).</td></tr>
+<tr><td valign="top"><a href="#start_link-2">start_link/2</a></td><td>start a connection handler.</td></tr>
+<tr><td valign="top"><a href="#stat-1">stat/1</a></td><td>status message of the database.</td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>stop the connection handler.</td></tr>
+<tr><td valign="top"><a href="#stop-2">stop/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sync-1">sync/1</a></td><td>sync updates to file/device.</td></tr>
+<tr><td valign="top"><a href="#vanish-1">vanish/1</a></td><td>remove all records.</td></tr>
+<tr><td valign="top"><a href="#vsiz-2">vsiz/2</a></td><td>return the size of the value for the given key.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="adddouble-4">adddouble/4</a></h3>
+<div class="spec">
+<p><tt>adddouble(ConnHandler, Key, Integral, Fractional) -&gt; any()</tt></p>
+</div><p>add a real number to the value and return the summation value (NOT TESTED)</p>
+
+<h3 class="function"><a name="addint-3">addint/3</a></h3>
+<div class="spec">
+<p><tt>addint(ConnHandler, Key, N) -&gt; any()</tt></p>
+</div><p>add integer to the value and return the summation value</p>
+
+<h3 class="function"><a name="copy-2">copy/2</a></h3>
+<div class="spec">
+<p><tt>copy(ConnHandler, Path) -&gt; any()</tt></p>
+</div><p>
+  copy database to a different file (NOT TESTED)<br>
+   Path - specifies the path of the destination file. If it begins with <code>@</code>, the trailing substring is executed as a command line.<br></p>
+
+<h3 class="function"><a name="fwmkeys-3">fwmkeys/3</a></h3>
+<div class="spec">
+<p><tt>fwmkeys(ConnHandler, Prefix, MaxKeys) -&gt; any()</tt></p>
+</div><p>return keys which start with the given Prefix (a maximum of MaxKeys are returned)</p>
+
+<h3 class="function"><a name="fwmkeys-4">fwmkeys/4</a></h3>
+<div class="spec">
+<p><tt>fwmkeys(ConnHandler, Prefix, MaxKeys, From) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get-2">get/2</a></h3>
+<div class="spec">
+<p><tt>get(ConnHandler, Key) -&gt; any()</tt></p>
+</div><p>get the value for the given key</p>
+
+<h3 class="function"><a name="iterinit-1">iterinit/1</a></h3>
+<div class="spec">
+<p><tt>iterinit(ConnHandler) -&gt; any()</tt></p>
+</div><p>initialize the iterator to iterate over keys</p>
+
+<h3 class="function"><a name="iterinit-2">iterinit/2</a></h3>
+<div class="spec">
+<p><tt>iterinit(ConnHandler, From) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="iternext-1">iternext/1</a></h3>
+<div class="spec">
+<p><tt>iternext(ConnHandler) -&gt; any()</tt></p>
+</div><p>return the next key from the iterator</p>
+
+<h3 class="function"><a name="iternext-2">iternext/2</a></h3>
+<div class="spec">
+<p><tt>iternext(ConnHandler, From) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="mget-2">mget/2</a></h3>
+<div class="spec">
+<p><tt>mget(ConnHandler, Keys) -&gt; any()</tt></p>
+</div><p>multi-get</p>
+
+<h3 class="function"><a name="out-2">out/2</a></h3>
+<div class="spec">
+<p><tt>out(ConnHandler, Key) -&gt; any()</tt></p>
+</div><p>remove the record corresponding to the given key</p>
+
+<h3 class="function"><a name="put-3">put/3</a></h3>
+<div class="spec">
+<p><tt>put(ConnHandler, Key, Value) -&gt; any()</tt></p>
+</div><p>store the given key, value pair</p>
+
+<h3 class="function"><a name="put-4">put/4</a></h3>
+<div class="spec">
+<p><tt>put(ConnHandler, Key, Value, From) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="putcat-3">putcat/3</a></h3>
+<div class="spec">
+<p><tt>putcat(ConnHandler, Key, Value) -&gt; any()</tt></p>
+</div><p>append Value to the end</p>
+
+<h3 class="function"><a name="putkeep-3">putkeep/3</a></h3>
+<div class="spec">
+<p><tt>putkeep(ConnHandler, Key, Value) -&gt; any()</tt></p>
+</div><p>
+  store the given key, value pair only if the given key does not exist already.
+  if it already exists, will throw an error.</p>
+
+<h3 class="function"><a name="putnr-3">putnr/3</a></h3>
+<div class="spec">
+<p><tt>putnr(ConnHandler, Key, Value) -&gt; any()</tt></p>
+</div><p>store the key, value pair but don't wait for response from the server</p>
+
+<h3 class="function"><a name="putsh1-4">putsh1/4</a></h3>
+<div class="spec">
+<p><tt>putsh1(ConnHandler, Key, Value, Width) -&gt; any()</tt></p>
+</div><p>append Value to the end and shift to the left to retain the Width supplied</p>
+
+<h3 class="function"><a name="restore-3">restore/3</a></h3>
+<div class="spec">
+<p><tt>restore(ConnHandler, Path, TS) -&gt; any()</tt></p>
+</div><p>
+  restore database file from update log (NOT TESTED)<br>
+   Path - specifies the path of the update log directory. If it begins with <code>+</code>, the trailing substring is treated as the path and consistency checking is omitted.<br>
+   TS - specifies the beginning timestamp in microseconds.<br></p>
+
+<h3 class="function"><a name="rnum-1">rnum/1</a></h3>
+<div class="spec">
+<p><tt>rnum(ConnHandler) -&gt; any()</tt></p>
+</div><p>total number of records</p>
+
+<h3 class="function"><a name="setmst-3">setmst/3</a></h3>
+<div class="spec">
+<p><tt>setmst(ConnHandler, Host, Port) -&gt; any()</tt></p>
+</div><p>
+  set the replication master (NOT TESTED)<br>
+   Host - specifies the name/address of the server.<br>
+   Port - specifies the port number.<br></p>
+
+<h3 class="function"><a name="size-1">size/1</a></h3>
+<div class="spec">
+<p><tt>size(ConnHandler) -&gt; any()</tt></p>
+</div><p>size of the database</p>
+
+<h3 class="function"><a name="start-0">start/0</a></h3>
+<div class="spec">
+<p><tt>start() -&gt; any()</tt></p>
+</div><p>start a connection handler (assumes default host and port)</p>
+
+<h3 class="function"><a name="start-2">start/2</a></h3>
+<div class="spec">
+<p><tt>start(Host, Port) -&gt; any()</tt></p>
+</div><p>start a connection handler</p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; any()</tt></p>
+</div><p>start a connection handler (assumes default host and port)</p>
+
+<h3 class="function"><a name="start_link-2">start_link/2</a></h3>
+<div class="spec">
+<p><tt>start_link(Host, Port) -&gt; any()</tt></p>
+</div><p>start a connection handler</p>
+
+<h3 class="function"><a name="stat-1">stat/1</a></h3>
+<div class="spec">
+<p><tt>stat(ConnHandler) -&gt; any()</tt></p>
+</div><p>status message of the database</p>
+
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
+<div class="spec">
+<p><tt>stop(ConnHandler) -&gt; any()</tt></p>
+</div><p>stop the connection handler</p>
+
+<h3 class="function"><a name="stop-2">stop/2</a></h3>
+<div class="spec">
+<p><tt>stop(ConnHandler, From) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="sync-1">sync/1</a></h3>
+<div class="spec">
+<p><tt>sync(ConnHandler) -&gt; any()</tt></p>
+</div><p>sync updates to file/device.</p>
+
+<h3 class="function"><a name="vanish-1">vanish/1</a></h3>
+<div class="spec">
+<p><tt>vanish(ConnHandler) -&gt; any()</tt></p>
+</div><p>remove all records</p>
+
+<h3 class="function"><a name="vsiz-2">vsiz/2</a></h3>
+<div class="spec">
+<p><tt>vsiz(ConnHandler, Key) -&gt; any()</tt></p>
+</div><p>return the size of the value for the given key</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jan 30 2009, 07:58:13.</i></p>
+</body>
+</html>

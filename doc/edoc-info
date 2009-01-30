@@ -1,3 +1,3 @@
 {application,tora}.
 {packages,[]}.
-{modules,[tora]}.
+{modules,[tora,tora_conn]}.
