@@ -354,7 +354,7 @@ with_connection(PoolId, Pools, F) ->
     {#connid{lf=Usage, pid=ConnPid}, Connection, Connections1} = gb_trees:take_smallest(Connections),
     
     % assign call to connection handler
-    F(ConnPid),
+    spawn(fun() -> F(ConnPid) end),
     
     % update lf for the connection handler
     Usage1 = Usage + 1,
