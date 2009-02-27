@@ -44,7 +44,7 @@
 
 %% API
 -export([
-    start/1, start/3, start_link/1, start_link/3, stop/1, 
+    start/1, start/3, start_link/1, start_link/3, stop/0, stop/1, 
     add_to_pool/1, add_to_pool/3, pool_size/1, pool_connections/1, pool_create/1, pool_create/3,
     put/3, putkeep/3, putcat/3, putsh1/4, putnr/3, out/2,
     get/2, mget/2, vsiz/2, iterinit/1, iternext/1, 
@@ -128,7 +128,11 @@ pool_create(PoolId) ->
 pool_create(PoolId, Host, Port) when is_atom(PoolId) ->
     gen_server:call(?SERVER, {PoolId, pool_create, {Host, Port}}).
 
-%% @doc stop all connections in an existing pool
+%% @doc stop the tora gen_server
+stop() ->
+    gen_server:cast(?SERVER, terminate_all).
+
+%% @doc close all connections in an existing pool
 stop(PoolId) when is_atom(PoolId) ->
     gen_server:call(?SERVER, {PoolId, terminate}).
 
@@ -273,15 +277,15 @@ handle_call({PoolId, add_to_pool, {Host, Port}}, _From, #state{pools=Pools, conn
     Conns1 = gb_trees:enter(ConnPid, Pool1, Conns),
     {reply, ok, #state{pools=Pools1, conns=Conns1}};    
 
-handle_call({PoolId, pool_size}, _From, #state{pools=Pools, conns=Conns}) ->
+handle_call({PoolId, pool_size}, _From, #state{pools=Pools}=State) ->
     {value, #pool{connections=Connections}} = gb_trees:lookup(PoolId, Pools),
     PoolSize = gb_trees:size(Connections),
-    {reply, PoolSize, #state{pools=Pools, conns=Conns}};
+    {reply, PoolSize, State};
 
-handle_call({PoolId, pool_connections}, _From, #state{pools=Pools, conns=Conns}) ->
+handle_call({PoolId, pool_connections}, _From, #state{pools=Pools}=State) ->
     {value, #pool{connections=Connections}} = gb_trees:lookup(PoolId, Pools),
     ConnPids = [ConnPid || #connid{pid=ConnPid} <- gb_trees:keys(Connections)],
-    {reply, ConnPids, #state{pools=Pools, conns=Conns}};
+    {reply, ConnPids, State};
 
 handle_call({PoolId, pool_create, {Host, Port}}, _From, State) ->
     {reply, ok, create_pool(PoolId, Host, Port, State)};
@@ -300,6 +304,8 @@ handle_call({PoolId, Method, ArgsTuple}, From, #state{pools=Pools, conns=Conns})
     ),
     {noreply, #state{pools=Pools1, conns=Conns}}.
 
+handle_cast(terminate_all, State) ->
+    {stop, normal, State};
 handle_cast({PoolId, Method, ArgsTuple}, #state{pools=Pools, conns=Conns}) 
     when is_atom(Method) andalso is_tuple(ArgsTuple) ->
     Pools1 = with_connection(
@@ -327,7 +333,11 @@ handle_info(_Info, State) -> {noreply, State}.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{conns=Conns}) ->
+    % close all connections
+    lists:foreach(
+        fun (ConnPid) -> ok = tora_conn:stop(ConnPid) end,
+        gb_trees:keys(Conns)),
     ok.
 
 %%====================================================================

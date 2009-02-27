@@ -3,7 +3,7 @@ setup() ->
     ok = tora:vanish(mypool).
 
 cleanup(_Foo) ->
-    ok = tora:stop(mypool).
+    ok = tora:stop().
 
 test_pool_create() ->
     tora:pool_create(mypool1),
