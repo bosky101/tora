@@ -59,7 +59,7 @@
 -define(CID_FWMKEYS, <<16#c858:16>>).
 -define(CID_ADDINT, <<16#c860:16>>).
 -define(CID_ADDDOUBLE, <<16#c861:16>>).
--define(CID_ADDEXT, <<16#c868:16>>).
+-define(CID_EXT, <<16#c868:16>>).
 -define(CID_SYNC, <<16#c870:16>>).
 -define(CID_VANISH, <<16#c871:16>>).
 -define(CID_COPY, <<16#c872:16>>).
@@ -75,10 +75,10 @@
         put/3, put/4, putkeep/3, putkeep/4, putcat/3, putcat/4, putsh1/4, putsh1/5, putnr/3, out/2, out/3,
         get/2, get/3, mget/2, mget/3,
         vsiz/2, vsiz/3, iterinit/1, iterinit/2, iternext/1, iternext/2, fwmkeys/3, fwmkeys/4,
-        addint/3, addint/4, adddouble/4, adddouble/5, 
+        addint/3, addint/4, adddouble/4, adddouble/5, ext/4, ext/5, misc/3, misc/4,
         sync/1, sync/2, vanish/1, vanish/2, rnum/1, rnum/2, size/1, size/2, stat/1, stat/2
     ]).
-%% -export([ext/4, misc/3]). % NOT IMPLEMENTED
+
 -export([copy/2, copy/3, restore/3, restore/4, setmst/3, setmst/4]). % NOT TESTED
 -record(state, {host, port, socket}).
 
@@ -214,6 +214,13 @@ adddouble(ConnHandler, Key, Integral, Fractional, From)
     when is_list(Key) andalso is_integer(Integral) andalso is_integer(Fractional) ->
         call_(adddouble, ConnHandler, From, [list_to_binary(Key), Integral, Fractional]).
 
+%% @doc lua extension for tokyo cabinet
+ext(ConnHandler, Fun, Key, Value)->
+    ext(ConnHandler, Fun, Key, Value, self() ).
+
+ext(ConnHandler, Fun, Key, Value, From)  ->
+    call_(ext, ConnHandler, From , [list_to_binary(Fun), list_to_binary(Key), list_to_binary(Value)] ).
+
 %% @doc sync updates to file/device.
 sync(ConnHandler) -> sync(ConnHandler, self()).
 %% @private
@@ -271,6 +278,13 @@ setmst(ConnHandler, Host, Port) ->
 setmst(ConnHandler, Host, Port, From) when is_list(Host) andalso is_integer(Port) ->
     call_(setmst, ConnHandler, From, [list_to_binary(Host), Port]).
 
+%% @doc misc for running search,etc
+misc(ConnHandler, Fun, Arguments)->
+    misc(ConnHandler, Fun, Arguments, self() ).
+
+misc(ConnHandler, Fun, Arguments, From)  ->
+    call_(misc, ConnHandler, From , [list_to_binary(Fun), list_to_binary(Arguments)] ).
+
 %%====================================================================
 %% Private stuff
 %%====================================================================
@@ -314,9 +328,9 @@ loop(State) ->
     NewState = receive
         {handle_call, From, {terminate, []}} ->
             reply_(State, From, {handle_call, Self, gen_tcp:close(Sock)});
-        {handle_call, From, {put, [Key, Value]}} ->
+	{handle_call, From, {put, [Key, Value]}} ->
             gen_tcp:send(Sock, iolist_to_binary([?CID_PUT, ?KEYSIZE, ?VALSIZE, Key, Value])),
-            reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_success/2)});
+	    reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_success/2)});
         {handle_call, From, {putkeep, [Key, Value]}} ->
             gen_tcp:send(Sock, iolist_to_binary([?CID_PUTKEEP, ?KEYSIZE, ?VALSIZE, Key, Value])),
             reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_success/2)});
@@ -388,12 +402,20 @@ loop(State) ->
             HostSize = byte_size(Host),
             gen_tcp:send(Sock, iolist_to_binary([?CID_SETMST, <<HostSize:32>>, <<Port:32>>, Host])),
             reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_success/2)});
-        {handle_call, From, _} ->
+	{handle_call, From, {ext, [Fun, Key, Value]}} ->
+	    Size =   fun(Data) -> DataSize = byte_size(Data), <<DataSize:32>> end,
+	    gen_tcp:send(Sock, iolist_to_binary([?CID_EXT, Size(Fun), <<0:32>>, Size(Key), Size(Value), Fun, Key, Value])),
+	    reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_ext/2)});
+	{handle_call, From, {misc, [Fun, Arguments]}} ->
+	    Size =   fun(Data) -> DataSize = byte_size(Data), <<DataSize:32>> end,
+	    gen_tcp:send(Sock, iolist_to_binary([?CID_MISC, Size(Fun), <<0:32>>, Size(Arguments), Fun, Arguments])),
+	    reply_(State, From, {handle_call, Self, recv_(Sock, fun recv_misc/2)});
+	{handle_call, From, _} ->
             reply_(State, From, {handle_call, Self, {error, invalid_call}});
         {handle_cast, {putnr, [Key, Value]}} ->
             gen_tcp:send(Sock, iolist_to_binary([?CID_PUTNR, ?KEYSIZE, ?VALSIZE, Key, Value])),
             State;
-        _ ->
+	_ ->
             void
     end,
     loop(NewState).
@@ -426,8 +448,13 @@ recv_mget(Sock, Reply) -> recv_count_4tuple(Sock, Reply).
 recv_fwmkeys(Sock, Reply) -> recv_count_2tuple(Sock, Reply).
 recv_addint(Sock, Reply) -> recv_size(Sock, Reply).
 recv_adddouble(Sock, Reply) -> recv_size64_size64(Sock, Reply).
+recv_ext(Sock, Reply)->  recv_ext_size8_size32_data(Sock,Reply).
 recv_stat(Sock, Reply) -> recv_size_data(Sock, Reply).
 recv_iternext(Sock, Reply) -> binary_to_list(recv_size_data(Sock, Reply)).
+recv_misc(Sock,Reply) -> recv_misc_size8_size32_data(Sock,Reply).
+			  			 
+     
+
 
 %%====================================================================
 %% Generic handlers for common reply formats
@@ -484,6 +511,28 @@ recv_count_2tuple(Sock, Reply) ->
             Keys
     end.
 
+recv_ext_size8_size32_data(Sock,Reply) ->
+    case Reply of 
+	{tcp, _ ,<<0:8, Cnt:32, Rest/binary>>}->
+	    {Acc,_Rest} = recv_until(Sock,Rest,Cnt),
+	    Acc
+    end.
+	
+recv_misc_size8_size32_data(Sock,Reply)->
+    case Reply of
+	{tcp, _ , <<0:8, Cnt:32, Rest/binary>>}->
+	    {Keys, _} = lists:mapfoldl(
+                            fun(_N, Acc) ->
+                                <<KeySize:32, Bin/binary>> = Acc,
+                                {Key, Rest1} = recv_until(Sock, Bin, KeySize),
+                                {binary_to_list(Key), Rest1}
+                            end,
+                            Rest, lists:seq(1, Cnt)
+                        ),
+	    Keys	    
+    end.
+    
+    
 %%====================================================================
 %% Utils
 %%====================================================================
